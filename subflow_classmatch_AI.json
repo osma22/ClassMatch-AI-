@@ -1,0 +1,1420 @@
+{
+  "name": "subflow_classmatch_AI",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "action"
+            },
+            {
+              "name": "lead_id",
+              "type": "any"
+            },
+            {
+              "name": "match_reason"
+            },
+            {
+              "name": "tutor_name"
+            },
+            {
+              "name": "trial_time"
+            },
+            {
+              "name": "trial_date"
+            },
+            {
+              "name": "booked_at"
+            }
+          ]
+        }
+      },
+      "id": "a5e0dbbc-70d4-4c10-baea-7ce19e9ed72f",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -1344,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const action = String($json.action || '').trim();\nconst allowed = ['lookup_lead','search_tutors','confirm_booking'];\nreturn [{\n  json: {\n    ...$json,\n    action,\n    _action_valid: allowed.includes(action)\n  }\n}];"
+      },
+      "id": "6913fb5d-8dd9-4971-8be8-d8bbac3ed77c",
+      "name": "Validate Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "bf835e68-f596-4a76-9054-202c06eb98e6",
+              "leftValue": "={{ $json._action_valid }}",
+              "rightValue": "is true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "bb1632d7-a486-4760-b25d-f96768643d10",
+      "name": "IF Action Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "lookup_lead",
+              "outputKey": "0"
+            },
+            {
+              "value2": "search_tutors",
+              "outputKey": "1"
+            },
+            {
+              "value2": "confirm_booking",
+              "outputKey": "2"
+            }
+          ]
+        },
+        "fallbackOutput": 0
+      },
+      "id": "c1f50270-adc6-4914-a8c4-44f6fca49fcb",
+      "name": "Switch on action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, action: $json.action || null, data: null, error: 'Unknown action. Use: lookup_lead | search_tutors | confirm_booking' } }];"
+      },
+      "id": "21f6774d-619b-44c5-89b3-866c8bf61e4f",
+      "name": "Return unknown action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        656
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1271184497,
+          "mode": "list",
+          "cachedResultName": "Leads"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $node['Switch on action'].json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7277a91c-c764-4c23-bfff-507981b678b7",
+      "name": "Get Lead from Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -480,
+        -416
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\nif (!rows || rows.length === 0) {\n  const leadId = $node['Switch on action'].json.lead_id || '';\n  return [{ json: { found: false, error: 'Lead ID not found: ' + leadId } }];\n}\n\nconst lead = rows[0];\n\nreturn [{\n  json: {\n    found: true,\n    lead_id:        lead.lead_id,\n    child_name:     lead.child_name,\n    child_age:      lead.child_age,\n    year_group:     lead.year_group,\n    subject:        lead.subject,\n    preference:     lead.preference,\n    availability:   lead.availability,\n    weak_areas:     lead.weak_areas || lead.challenges || '',\n    email:          lead.email,\n    exam_in_months: lead.exam_in_months,\n    status:         lead.status\n  }\n}];"
+      },
+      "id": "b4c98e70-3752-4523-ae7d-2e31cfea5d15",
+      "name": "Find Lead by ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\n\nif (!lead.found) {\n  return [{ json: { ok: false, action: 'lookup_lead', data: null, error: lead.error || 'Lead not found' } }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    action: 'lookup_lead',\n    data: {\n      lead_id: lead.lead_id,\n      child_name: lead.child_name,\n      year_group: lead.year_group,\n      subject: lead.subject,\n      preference: lead.preference,\n      weak_areas: lead.weak_areas,\n      email: lead.email,\n      exam_in_months: lead.exam_in_months,\n      availability: lead.availability,\n      status: lead.status\n    },\n    error: null\n  }\n}];"
+      },
+      "id": "3683a450-ac38-4c2a-9d4a-6f2296c3d961",
+      "name": "Return lookup_lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -528
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 640171091,
+          "mode": "list",
+          "cachedResultName": "Tutors"
+        },
+        "options": {}
+      },
+      "id": "6a69409f-d402-4a28-b070-f15fd4e610fe",
+      "name": "Get All Tutors",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -416,
+        -176
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $node['Switch on action'].json;\nconst tutors = $input.all().map(i => i.json);\n\nconst tutorList = tutors.map((t, i) =>\n  `Tutor ${i+1}:\\n  Name: ${t.tutor_name}\\n  Subjects: ${t.subjects}\\n  Type: ${t.type}\\n  Available Days: ${t.available_days}\\n  Available Times: ${t.available_times}\\n  Current Group Size: ${t.current_group_size || 0}/3`\n).join('\\n\\n');\n\nconst timetable = tutors.map(t =>\n  `${t.tutor_name} (${t.subjects}) — ${t.available_days} at ${t.available_times} [${t.type}]`\n).join('\\n');\n\nreturn [{\n  json: {\n    child_name:     input.child_name,\n    subject:        input.subject,\n    year_group:     input.year_group,\n    preference:     input.preference,\n    weak_areas:     input.weak_areas,\n    exam_in_months: input.exam_in_months,\n    lead_id:        input.lead_id,\n    email:          input.email,\n    tutor_list:     tutorList,\n    timetable:      timetable\n  }\n}];"
+      },
+      "id": "b08a812c-5fbe-4e4d-82c0-ecdedf17ede1",
+      "name": "Prepare for AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are a tutor matching expert. Find up to 3 suitable tutors for a student. Return ONLY plain text in the exact format specified. No JSON, no curly braces.\n\nMATCHING RULES:\n- Subject must match\n- Session type must match preference (1:1 or Small Group)\n- For Small Group: Current Group Size must be less than 4\n- Rank from best to least match based on subject fit and availability\n- If 0 tutors match, output NO_MATCH: true only",
+              "role": "system"
+            },
+            {
+              "content": "=Find up to 3 matching tutors.\n\nSTUDENT:\n- Name: {{ $json.child_name }}\n- Subject: {{ $json.subject }}\n- Year Group: {{ $json.year_group }}\n- Preference: {{ $json.preference }}\n- Weak Areas: {{ $json.weak_areas }}\n- Exam in: {{ $json.exam_in_months }} months\n\nAVAILABLE TUTORS:\n{{ $json.tutor_list }}\n\nIf matches found output EXACTLY (repeat TUTOR block per match max 3):\n\nMATCH_FOUND: true\nTUTOR:\nrank: 1\ntutor_name: [value]\ntutor_type: [value]\navailable_days: [value]\navailable_times: [value]\nsummary: [2 sentences explaining why this tutor specifically suits this child based on their weak areas and subject needs]\nEND_TUTOR\n\nIf no match output EXACTLY:\nNO_MATCH: true\nRecommand 2/3 teacher who teaches {{ $json.subject }}. Mention their avaibility and summary why this tutor suits this child and take preference from the user."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "31ca78b5-34ad-432d-aa3d-46f3b7c332ec",
+      "name": "AI Match Tutors",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        48,
+        -160
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "TWxXxCtYWmu5mwYu",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.first().json;\nconst text =\n  aiResponse?.message?.content ||\n  aiResponse?.choices?.[0]?.message?.content ||\n  aiResponse?.text ||\n  aiResponse?.content || '';\n\nconst prep = $node['Prepare for AI'].json;\n\nif (text.includes('NO_MATCH: true')) {\n  return [{\n    json: {\n      match_found: false,\n      tutors: [],\n      timetable: prep.timetable,\n      message: 'No tutors available for the requested slot. Here is the full timetable:\\n\\n' + prep.timetable.split('\\n').map(l => '📅 ' + l).join('\\n')\n    }\n  }];\n}\n\nconst blocks = [...text.matchAll(/TUTOR:([\\s\\S]*?)END_TUTOR/g)];\n\nfunction field(block, key) {\n  const m = block.match(new RegExp(key + ':\\\\s*(.+)'));\n  return m ? m[1].trim() : '';\n}\n\nconst tutors = blocks.map(m => ({\n  rank:            field(m[1], 'rank'),\n  tutor_name:      field(m[1], 'tutor_name'),\n  tutor_email:     field(m[1], 'tutor_email'),\n  tutor_type:      field(m[1], 'tutor_type'),\n  available_days:  field(m[1], 'available_days'),\n  available_times: field(m[1], 'available_times'),\n  summary:         field(m[1], 'summary')\n}));\n\nconst emojis = ['1️⃣','2️⃣','3️⃣'];\nconst message = tutors.map((t, i) =>\n  `${emojis[i]} *${t.tutor_name}* (${t.tutor_type})\\n📅 ${t.available_days} at ${t.available_times}\\n💡 ${t.summary}`\n).join('\\n\\n');\n\nreturn [{\n  json: {\n    match_found: true,\n    tutors,\n    message,\n    timetable: prep.timetable\n  }\n}];"
+      },
+      "id": "2e7d382f-9d91-40c9-96c6-7c417d80d401",
+      "name": "Extract & Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        352,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{\n  json: {\n    ok: true,\n    action: 'search_tutors',\n    data: {\n      match_found: r.match_found,\n      tutors: r.tutors,\n      message: r.message,\n      timetable: r.timetable\n    },\n    error: null\n  }\n}];"
+      },
+      "id": "23c4e951-eeb7-40b8-9208-4caccc1f9c5b",
+      "name": "Return search_tutors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $node['Switch on action'].json;\nconst trial_id = 'TRIAL-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5).toUpperCase();\nreturn [{ json: { ...input, trial_id, booked_at: new Date().toISOString() } }];"
+      },
+      "id": "d0fa5385-6ad3-4a37-98ac-e162f64faf83",
+      "name": "Prepare Trial Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Trials",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "trial_id": "={{ $('Prepare Trial Data').item.json.lead_id }}",
+            "lead_id": "={{ $('Prepare Trial Data').item.json.lead_id }}",
+            "tutor_name": "={{ $('get tutor details').item.json.tutor_name }}",
+            "tutor_type": "={{ $('get tutor details').item.json.type }}",
+            "trial_date": "={{ $('Prepare Trial Data').item.json.trial_date }}",
+            "trial_time": "={{ $('Prepare Trial Data').item.json.trial_time }}",
+            "match_reason": "={{ $('When Executed by Another Workflow').item.json.match_reason }}",
+            "trial_status": "Booked",
+            "payment_sent": "FALSE",
+            "followup_sent": "FALSE",
+            "booked_at": "={{ $('Prepare Trial Data').item.json.booked_at }}",
+            "tutor_email": "={{ $('get tutor details').item.json.tutor_email }}",
+            "student_email": "={{ $json.email }}",
+            "student_name": "={{ $json.child_name }}",
+            "student_id": "={{ $('student_id').item.json.student_id }}",
+            "course_name": "={{ $json.course }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "trial_id",
+              "displayName": "trial_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "student_id",
+              "displayName": "student_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "student_name",
+              "displayName": "student_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "student_email",
+              "displayName": "student_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tutor_name",
+              "displayName": "tutor_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tutor_email",
+              "displayName": "tutor_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "tutor_type",
+              "displayName": "tutor_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trial_date",
+              "displayName": "trial_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trial_time",
+              "displayName": "trial_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "course_name",
+              "displayName": "course_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "match_reason",
+              "displayName": "match_reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trial_status",
+              "displayName": "trial_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_sent",
+              "displayName": "payment_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "followup_sent",
+              "displayName": "followup_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "booked_at",
+              "displayName": "booked_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Additional Comments like:\r\n1. Any cover lessons taken for other tutor? write dates & student name.\r\n2. Any notes/comments.",
+              "displayName": "Additional Comments like:\r\n1. Any cover lessons taken for other tutor? write dates & student name.\r\n2. Any notes/comments.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b9f50c76-1852-4b60-b336-15b6d0107bc1",
+      "name": "Save Trial to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        640,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1271184497,
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $node['Prepare Trial Data'].json.lead_id }}",
+            "status": "Trial Booked",
+            "row_number": 0
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "child_name",
+              "displayName": "child_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "child_age",
+              "displayName": "child_age",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "year_group",
+              "displayName": "year_group",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "exam_in_months",
+              "displayName": "exam_in_months",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "availability",
+              "displayName": "availability",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "preference",
+              "displayName": "preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "challenges",
+              "displayName": "challenges",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assessment_link",
+              "displayName": "assessment_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assessment_sent",
+              "displayName": "assessment_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "contact no",
+              "displayName": "contact no",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_marks",
+              "displayName": "total_marks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "weak_areas",
+              "displayName": "weak_areas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "assessment_submitted_at",
+              "displayName": "assessment_submitted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Column 1",
+              "displayName": "Column 1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "roadmap_sent",
+              "displayName": "roadmap_sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "57cc7036-e75e-405d-b212-5ffbe2cb67c1",
+      "name": "Update Lead - Trial Booked",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        -48,
+        352
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Trial Session Confirmed — {{ $json.child_name }} & {{ $('get tutor details').item.json.tutor_name }} ✅",
+        "message": "=Dear {{ $json.child_name }},<br><br>\n\nCongratulations! 🎉<br>\nWe are sharing your <b>trial class link</b> before you purchase our package. Kindly join the trial class to better understand how our sessions work.<br><br>\n\n<b>Trial Session Link:</b><br>\n<a href=\"{{ $('get tutor details').item.json.trial_class_link }}\">\n{{ $('get tutor details').item.json.trial_class_link }}\n</a><br><br>\n\nAlternatively, you can directly confirm your seat by completing the monthly payment. Please note that <b>seats are limited</b>. Kindly complete the bank transfer to book your regular class.<br><br>\n\n<b>Bank Details:</b><br>\nAccount Name: Hunarly Ltd<br>\nSort Code: 23-08-01<br>\nAccount Number: 42933302<br><br>\n\n<b>Amount:</b> {{ $('get_course_details').item.json.Fee }} for {{ $('get_course_details').item.json[\"Payment Frequency\"] }}<br><br>\n\n<b>Your Student ID:</b> {{ $('student_id').item.json.student_id }}<br><br>\n\n<b>Important:</b><br>\nPlease paste your <b>Student ID</b> in the <b>reference section</b> while transferring the payment. Remember to keep this ID for future correspondence.<br><br>\n\nBest Regards,<br>\n<b>Team Hunarly</b>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "31f96240-7a78-49b5-9bdd-777c3fd2ee46",
+      "name": "Send Confirmation Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        608,
+        320
+      ],
+      "webhookId": "7c7f65b4-8d71-4454-b3d3-383dc5564757",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Yy6Z9BUe6PZPOXx5",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $node['Prepare Trial Data'].json;\nreturn [{\n  json: {\n    success: true,\n    trial_id:   data.trial_id,\n    tutor_name: data.tutor_name,\n    trial_date: data.trial_date,\n    trial_time: data.trial_time,\n    email:      data.email,\n    message:    `Booking confirmed! Trial ID: ${data.trial_id}. Confirmation email sent to ${data.email}.`\n  }\n}];"
+      },
+      "id": "47af18f6-b831-4f96-8dd7-7ab85734c3fd",
+      "name": "Return Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nreturn [{\n  json: {\n    ok: !!r.success,\n    action: 'confirm_booking',\n    data: r,\n    error: r.success ? null : (r.error || 'Booking failed')\n  }\n}];"
+      },
+      "id": "ffe70f1b-df99-4a7c-ac1e-9546b8e98732",
+      "name": "Return confirm_booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $json }];"
+      },
+      "id": "91d7a403-b654-4deb-a806-cc7ee05b75b7",
+      "name": "Finalize Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2096,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nfor (const item of items) {\n  const leadId = item.json.lead_id;\n\n  // Extract unique part from lead ID\n  const leadPart = leadId.split('-').slice(-1)[0];\n\n  const studentId = 'STU-' + leadPart;\n\n  item.json.student_id = studentId;\n}\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        224
+      ],
+      "id": "1497f3bf-76e2-4e41-9b95-eb5752d0b0dc",
+      "name": "student_id"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 640171091,
+          "mode": "list",
+          "cachedResultName": "Tutors",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit#gid=640171091"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "tutor_name",
+              "lookupValue": "={{ $json.tutor_name }}"
+            }
+          ]
+        },
+        "combineFilters": "OR",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        112,
+        80
+      ],
+      "id": "f069df8c-d0be-4a5f-94a8-9981bfc7d470",
+      "name": "get tutor details",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 608313309,
+          "mode": "list",
+          "cachedResultName": "course_details",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit#gid=608313309"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Course Name",
+              "lookupValue": "={{ $('Get_lead_details').item.json.course }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        432
+      ],
+      "id": "6dfae07a-266e-4a91-a1c8-17374ebbb3cd",
+      "name": "get_course_details",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1271184497,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit#gid=1271184497"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $('Get_lead_details').item.json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        304,
+        432
+      ],
+      "id": "02665fd9-2360-4502-b558-8666aa01dd74",
+      "name": "Get_leads_info",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw",
+          "mode": "list",
+          "cachedResultName": "lead_data_google_sheet_template",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1271184497,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_OdwpqUVYLEEGHYc95AJIAaREbUiqyOm8K1jg-ppbBw/edit#gid=1271184497"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "lead_id",
+              "lookupValue": "={{ $('Prepare Trial Data').item.json.lead_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        320,
+        80
+      ],
+      "id": "9f825b70-fcec-4f90-8a47-ffeb2c4b00f9",
+      "name": "Get_lead_details",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Snlt2JpcsNze7TrV",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Get_lead_details": [
+      {
+        "json": {
+          "row_number": 14,
+          "lead_id": "LEAD-1773123664288-ZF322U",
+          "timestamp": "2026-03-10T06:21:04.288Z",
+          "child_name": "Jahid",
+          "child_age": "12",
+          "year_group": "Year 5",
+          "subject": "English",
+          "course": "Foundations Reading .comprehension",
+          "availability": "Monday 4-5",
+          "preference": "1:1",
+          "challenges": "writing, spelling mistake",
+          "assessment_link": "https://hunarly.com/quiz/hunarly-year-4-diagnostictest-english/?lead_id=LEAD-1773123664288-ZF322U",
+          "assessment_sent": "true",
+          "status": "Trial Booked",
+          "email": "asifuzzamanasif734@gmail.com",
+          "contact no": "+8801624223544",
+          "score": "5",
+          "total_marks": "13",
+          "weak_areas": "11EngSpellingE,11EngSpellingM,11EngSpellingH",
+          "assessment_submitted_at": "2026-03-10T06:28:12+00:00",
+          "roadmap_sent": "TRUE"
+        }
+      }
+    ],
+    "get_course_details": [
+      {
+        "json": {
+          "row_number": 47,
+          "Subjects": "English",
+          "Course ID": "RCF",
+          "Course Name": "Foundations Reading .comprehension",
+          "Total Classes": 6,
+          "Fee": "",
+          "Payment Frequency": "",
+          "Frequency comments": "",
+          "course_outcome": "",
+          "assessment-link": ""
+        }
+      }
+    ],
+    "get tutor details": [
+      {
+        "json": {
+          "row_number": 2,
+          "tutor_name": "Sarah Khan",
+          "tutor_email": "ajasif734@gmail.com",
+          "subjects": "English, Verbal Reasoning",
+          "type": "1:1",
+          "available_days": "Mon, Wed, Fri",
+          "available_times": "17:00-19:00",
+          "trial_class_link": "https://hunarly.com/meet/url_zwfrnfee",
+          "class_link": "https://hunarly.com/meet/url_zwfrnfee",
+          "current_group_size": 2
+        }
+      }
+    ],
+    "Prepare Trial Data": [
+      {
+        "json": {
+          "action": "confirm_booking",
+          "lead_id": "LEAD-1773123664288-ZF322U",
+          "match_reason": "English tutor with verbal reasoning skills",
+          "tutor_name": "Sarah Khan",
+          "trial_time": "17:00",
+          "trial_date": "Monday",
+          "booked_at": "2026-03-10T07:38:02.418Z",
+          "_action_valid": true,
+          "trial_id": "TRIAL-1773128282418-R4GZQ"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Validate Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Action": {
+      "main": [
+        [
+          {
+            "node": "IF Action Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Action Valid?": {
+      "main": [
+        [
+          {
+            "node": "Switch on action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return unknown action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch on action": {
+      "main": [
+        [
+          {
+            "node": "Get Lead from Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get All Tutors",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Trial Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead from Sheets": {
+      "main": [
+        [
+          {
+            "node": "Find Lead by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Lead by ID": {
+      "main": [
+        [
+          {
+            "node": "Return lookup_lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Tutors": {
+      "main": [
+        [
+          {
+            "node": "Prepare for AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for AI": {
+      "main": [
+        [
+          {
+            "node": "AI Match Tutors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Match Tutors": {
+      "main": [
+        [
+          {
+            "node": "Extract & Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Format Results": {
+      "main": [
+        [
+          {
+            "node": "Return search_tutors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Trial Data": {
+      "main": [
+        [
+          {
+            "node": "student_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Trial to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Update Lead - Trial Booked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Trial Booked": {
+      "main": [
+        [
+          {
+            "node": "get_course_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Confirmation Email": {
+      "main": [
+        [
+          {
+            "node": "Return Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Success": {
+      "main": [
+        [
+          {
+            "node": "Return confirm_booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return lookup_lead": {
+      "main": [
+        [
+          {
+            "node": "Finalize Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return search_tutors": {
+      "main": [
+        [
+          {
+            "node": "Finalize Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return confirm_booking": {
+      "main": [
+        [
+          {
+            "node": "Finalize Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return unknown action": {
+      "main": [
+        [
+          {
+            "node": "Finalize Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "student_id": {
+      "main": [
+        [
+          {
+            "node": "get tutor details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get tutor details": {
+      "main": [
+        [
+          {
+            "node": "Get_lead_details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_course_details": {
+      "main": [
+        [
+          {
+            "node": "Get_leads_info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_leads_info": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_lead_details": {
+      "main": [
+        [
+          {
+            "node": "Save Trial to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b881e677-27a3-4c64-be6a-c17bf2051b10",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ed977e6be7e44def4ca8b9bfe0f97407bc4263ee171f7474a4b29099e35d6274"
+  },
+  "id": "AWS1ArXoRgfQ6Mao",
+  "tags": []
+}
