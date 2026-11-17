@@ -1,4 +1,4 @@
-# ClassMatch AI 🎓🤖
+# ClassMatch AI using N8N 🎓🤖
 ### An End-to-End, AI-Powered Lead-to-Enrollment Automation System for Tutoring Businesses
 
 ClassMatch AI is a fully automated, AI-driven customer acquisition and operations pipeline built for a tutoring/coaching business (11+ exam prep, music, chess, GCSE, and other subjects). It takes a prospective parent from the **first chat message** all the way to **diagnostic assessment → personalised learning roadmap → tutor matching → trial booking → payment confirmation → feedback collection**, with almost zero manual intervention.
